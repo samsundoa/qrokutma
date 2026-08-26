@@ -10,6 +10,13 @@
         .container { width: 100%; max-width: 400px; background: #fff; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; }
         .screen { display: none; }
         .screen.active { display: block; }
+        
+        /* Giriş Ekranı Stili */
+        #loginScreen h1 { font-size: 20px; margin-bottom: 20px; color: #2c3e50; }
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; font-size: 14px; margin-bottom: 6px; color: #7f8c8d; font-weight: bold; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #bdc3c7; border-radius: 8px; font-size: 15px; }
+
         h1 { font-size: 22px; margin-bottom: 20px; color: #2c3e50; }
         .counter { font-size: 18px; color: #7f8c8d; margin-bottom: 30px; }
         .counter span { font-weight: bold; color: #2980b9; }
@@ -25,8 +32,22 @@
 <body>
 
     <div class="container">
-        <!-- 1. ANA EKRAN -->
-        <div id="homeScreen" class="screen active">
+        <!-- 0. GİRİŞ EKRANI -->
+        <div id="loginScreen" class="screen active">
+            <h1>DEPO GİRİŞİ</h1>
+            <div class="form-group">
+                <label>Kullanıcı Adı</label>
+                <input type="text" id="usernameInput" placeholder="Kullanıcı adınızı girin">
+            </div>
+            <div class="form-group">
+                <label>Şifre</label>
+                <input type="password" id="passwordInput" placeholder="Şifrenizi girin">
+            </div>
+            <button class="btn btn-primary" onclick="checkLogin()">GİRİŞ YAP</button>
+        </div>
+
+        <!-- 1. ANA EKRAN (Giriş yapınca açılır) -->
+        <div id="homeScreen" class="screen">
             <h1>QR HAVUZU</h1>
             <div class="counter">Sistem: <span id="remainingCount">Hazır</span></div>
             <button class="btn btn-primary" onclick="startQRProcess()">QR BAŞLAT</button>
@@ -47,6 +68,23 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, getDocs, doc, updateDoc, query, where, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // --- GİRİŞ BİLGİLERİ (İstediğin gibi değiştirebilirsin) ---
+        const DOGRU_KULLANICI = "depo";
+        const DOGRU_SIFRE = "12345";
+
+        window.checkLogin = function() {
+            const user = document.getElementById('usernameInput').value.trim();
+            const pass = document.getElementById('passwordInput').value.trim();
+
+            if (user === DOGRU_KULLANICI && pass === DOGRU_SIFRE) {
+                document.getElementById('loginScreen').classList.remove('active');
+                document.getElementById('homeScreen').classList.add('active');
+                updateCounters();
+            } else {
+                alert("Hatalı kullanıcı adı veya şifre!");
+            }
+        };
 
         const firebaseConfig = {
             apiKey: "AIzaSyDDrB1HQwibxGNgM4OSPDzI05x1KMdqH14",
@@ -120,8 +158,6 @@
             document.getElementById('qrScreen').classList.remove('active');
             document.getElementById('homeScreen').classList.add('active');
         }
-
-        updateCounters();
     </script>
 </body>
 </html>
