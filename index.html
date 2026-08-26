@@ -28,10 +28,8 @@
         <!-- 1. ANA EKRAN -->
         <div id="homeScreen" class="screen active">
             <h1>QR HAVUZU</h1>
-            <div class="counter">Kalan QR: <span id="remainingCount">Sistem Hazır</span></div>
+            <div class="counter">Sistem: <span id="remainingCount">Hazır</span></div>
             <button class="btn btn-primary" onclick="startQRProcess()">QR BAŞLAT</button>
-            <br>
-            <a href="admin.html" class="back-link">Yönetim / Yükleme Paneli &rarr;</a>
         </div>
 
         <!-- 2. QR GÖSTERME EKRANI -->
@@ -65,14 +63,12 @@
 
         let currentQRDocId = null;
 
-        // Sayfa açılışını yavaşlatmamak için sayacı isteğe bağlı basitleştirdik
         async function updateCounters() {
             document.getElementById('remainingCount').innerText = "Hazır";
         }
 
         window.startQRProcess = async function() {
             try {
-                // SAKINCA YARATMAYACAK ŞEKİLDE: orderBy kaldırıldı, limit 1 yapıldı (Anında açılır)
                 const q = query(
                     collection(db, "qr_pool"), 
                     where("status", "==", "kullanilmadi"), 
@@ -82,7 +78,7 @@
                 const querySnapshot = await getDocs(q);
 
                 if (querySnapshot.empty) {
-                    alert('Havuzda kullanılabilir QR kalmadı! Lütfen yönetim panelinden QR yükleyin.');
+                    alert('Havuzda kullanılabilir QR kalmadı!');
                     return;
                 }
 
