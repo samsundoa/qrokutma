@@ -11,7 +11,6 @@
         .screen { display: none; }
         .screen.active { display: block; }
         
-        /* Giriş Ekranı Stili */
         #loginScreen h1 { font-size: 20px; margin-bottom: 20px; color: #2c3e50; }
         .form-group { margin-bottom: 15px; text-align: left; }
         .form-group label { display: block; font-size: 14px; margin-bottom: 6px; color: #7f8c8d; font-weight: bold; }
@@ -36,17 +35,17 @@
         <div id="loginScreen" class="screen active">
             <h1>DEPO GİRİŞİ</h1>
             <div class="form-group">
-                <label>Kullanıcı Adı</label>
-                <input type="text" id="usernameInput" placeholder="Kullanıcı adınızı girin">
+                <label>E-posta Adresi</label>
+                <input type="email" id="emailInput" placeholder="personel@depo.com">
             </div>
             <div class="form-group">
                 <label>Şifre</label>
-                <input type="password" id="passwordInput" placeholder="Şifrenizi girin">
+                <input type="password" id="passwordInput" placeholder="Şifreniz">
             </div>
             <button class="btn btn-primary" onclick="checkLogin()">GİRİŞ YAP</button>
         </div>
 
-        <!-- 1. ANA EKRAN (Giriş yapınca açılır) -->
+        <!-- 1. ANA EKRAN -->
         <div id="homeScreen" class="screen">
             <h1>QR HAVUZU</h1>
             <div class="counter">Sistem: <span id="remainingCount">Hazır</span></div>
@@ -67,24 +66,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, getDocs, doc, updateDoc, query, where, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        // --- GİRİŞ BİLGİLERİ (İstediğin gibi değiştirebilirsin) ---
-        const DOGRU_KULLANICI = "depo";
-        const DOGRU_SIFRE = "12345";
-
-        window.checkLogin = function() {
-            const user = document.getElementById('usernameInput').value.trim();
-            const pass = document.getElementById('passwordInput').value.trim();
-
-            if (user === DOGRU_KULLANICI && pass === DOGRU_SIFRE) {
-                document.getElementById('loginScreen').classList.remove('active');
-                document.getElementById('homeScreen').classList.add('active');
-                updateCounters();
-            } else {
-                alert("Hatalı kullanıcı adı veya şifre!");
-            }
-        };
 
         const firebaseConfig = {
             apiKey: "AIzaSyDDrB1HQwibxGNgM4OSPDzI05x1KMdqH14",
@@ -97,13 +80,23 @@
         };
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
 
         let currentQRDocId = null;
 
-        async function updateCounters() {
-            document.getElementById('remainingCount').innerText = "Hazır";
-        }
+        window.checkLogin = async function() {
+            const email = document.getElementById('emailInput').value.trim();
+            const pass = document.getElementById('passwordInput').value.trim();
+
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                document.getElementById('loginScreen').classList.remove('active');
+                document.getElementById('homeScreen').classList.add('active');
+            } catch (error) {
+                alert("Giriş başarısız! E-posta veya şifre hatalı.");
+            }
+        };
 
         window.startQRProcess = async function() {
             try {
