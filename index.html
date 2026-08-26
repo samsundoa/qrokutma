@@ -28,7 +28,7 @@
         <!-- 1. ANA EKRAN -->
         <div id="homeScreen" class="screen active">
             <h1>QR HAVUZU</h1>
-            <div class="counter">Kalan QR: <span id="remainingCount">Yükleniyor...</span></div>
+            <div class="counter">Kalan QR: <span id="remainingCount">Sistem Hazır</span></div>
             <button class="btn btn-primary" onclick="startQRProcess()">QR BAŞLAT</button>
             <br>
             <a href="admin.html" class="back-link">Yönetim / Yükleme Paneli &rarr;</a>
@@ -48,7 +48,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, updateDoc, query, where, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, updateDoc, query, where, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDDrB1HQwibxGNgM4OSPDzI05x1KMdqH14",
@@ -65,24 +65,17 @@
 
         let currentQRDocId = null;
 
+        // Sayfa açılışını yavaşlatmamak için sayacı isteğe bağlı basitleştirdik
         async function updateCounters() {
-            try {
-                const q = query(collection(db, "qr_pool"), where("status", "==", "kullanilmadi"));
-                const querySnapshot = await getDocs(q);
-                document.getElementById('remainingCount').innerText = querySnapshot.size + " adet";
-            } catch (error) {
-                console.error("Sayaç güncellenirken hata:", error);
-                document.getElementById('remainingCount').innerText = "Hazır";
-            }
+            document.getElementById('remainingCount').innerText = "Hazır";
         }
 
         window.startQRProcess = async function() {
             try {
-                // HIZLI VE OPTİMİZE: Sadece sıradaki ilk 1 adet kullanılmamış QR'ı çekiyoruz
+                // SAKINCA YARATMAYACAK ŞEKİLDE: orderBy kaldırıldı, limit 1 yapıldı (Anında açılır)
                 const q = query(
                     collection(db, "qr_pool"), 
                     where("status", "==", "kullanilmadi"), 
-                    orderBy("name"), 
                     limit(1)
                 );
                 
@@ -105,7 +98,7 @@
 
             } catch (error) {
                 console.error("QR başlatılırken hata:", error);
-                alert("Veritabanından QR çekilemedi. Lütfen bağlantınızı kontrol edin.");
+                alert("Veritabanından QR çekilemedi: " + error.message);
             }
         }
 
@@ -119,7 +112,6 @@
                 });
 
                 currentQRDocId = null;
-                updateCounters();
                 goHome();
             } catch (error) {
                 console.error("Güncellenirken hata:", error);
@@ -131,7 +123,6 @@
             if (e) e.preventDefault();
             document.getElementById('qrScreen').classList.remove('active');
             document.getElementById('homeScreen').classList.add('active');
-            updateCounters();
         }
 
         updateCounters();
