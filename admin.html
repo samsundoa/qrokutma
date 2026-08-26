@@ -9,13 +9,11 @@
         body { background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #333; }
         .container { width: 100%; max-width: 450px; background: #fff; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         
-        /* Giriş Ekranı Stili */
         #loginScreen h1 { font-size: 20px; margin-bottom: 20px; color: #2c3e50; text-align: center; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 14px; margin-bottom: 6px; color: #7f8c8d; font-weight: bold; }
         .form-group input { width: 100%; padding: 12px; border: 1px solid #bdc3c7; border-radius: 8px; font-size: 15px; }
         
-        /* Yönetim Paneli İçerik Stili */
         #adminScreen { display: none; }
         #adminScreen.active { display: block; }
         h1 { font-size: 22px; margin-bottom: 20px; color: #2c3e50; text-align: center; }
@@ -34,19 +32,19 @@
         <div id="loginScreen">
             <h1>YÖNETİM GİRİŞİ</h1>
             <div class="form-group">
-                <label>Kullanıcı Adı</label>
-                <input type="text" id="usernameInput" placeholder="Kullanıcı adınızı girin">
+                <label>E-posta Adresi</label>
+                <input type="email" id="emailInput" placeholder="admin@depo.com">
             </div>
             <div class="form-group">
                 <label>Şifre</label>
-                <input type="password" id="passwordInput" placeholder="Şifrenizi girin">
+                <input type="password" id="passwordInput" placeholder="Şifreniz">
             </div>
             <button class="btn btn-primary" onclick="checkLogin()">GİRİŞ YAP</button>
             <br>
             <a href="index.html" class="back-link">&larr; Ana Sayfaya Dön</a>
         </div>
 
-        <!-- 2. ASIL YÖNETİM PANELİ (Giriş yapılınca açılır) -->
+        <!-- 2. ASIL YÖNETİM PANELİ -->
         <div id="adminScreen">
             <h1>QR YÜKLEME PANELİ</h1>
             
@@ -64,25 +62,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // --- GİRİŞ BİLGİLERİ (İstediğin gibi değiştirebilirsin) ---
-        const DOGRU_KULLANICI = "admin";
-        const DOGRU_SIFRE = "12345";
-
-        window.checkLogin = function() {
-            const user = document.getElementById('usernameInput').value.trim();
-            const pass = document.getElementById('passwordInput').value.trim();
-
-            if (user === DOGRU_KULLANICI && pass === DOGRU_SIFRE) {
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('adminScreen').classList.add('active');
-            } else {
-                alert("Hatalı kullanıcı adı veya şifre!");
-            }
-        };
-
-        // Firebase Ayarları
         const firebaseConfig = {
             apiKey: "AIzaSyDDrB1HQwibxGNgM4OSPDzI05x1KMdqH14",
             authDomain: "samsundoa.firebaseapp.com",
@@ -94,7 +76,21 @@
         };
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
+
+        window.checkLogin = async function() {
+            const email = document.getElementById('emailInput').value.trim();
+            const pass = document.getElementById('passwordInput').value.trim();
+
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('adminScreen').classList.add('active');
+            } catch (error) {
+                alert("Giriş başarısız! E-posta veya şifre hatalı.");
+            }
+        };
 
         window.uploadQRs = async function() {
             const fileInput = document.getElementById('qrFiles');
