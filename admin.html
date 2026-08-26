@@ -3,43 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Yönetim ve Yükleme Paneli (Firebase)</title>
+    <title>Yönetim / Yükleme Paneli</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: #f4f7f6; padding: 20px; color: #333; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 600px; background: #fff; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        h1 { font-size: 20px; margin-bottom: 20px; color: #2c3e50; }
-        .section { margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
-        .btn { padding: 12px 20px; font-size: 14px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; }
-        .btn-blue { background-color: #2980b9; color: white; }
-        .btn-danger { background-color: #c0392b; color: white; }
-        input[type="file"] { margin-bottom: 10px; }
-        .status-text { margin-top: 10px; font-size: 14px; color: #27ae60; font-weight: bold; }
-        .back-link { display: inline-block; margin-top: 10px; color: #7f8c8d; text-decoration: none; font-size: 14px; }
+        body { background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #333; }
+        .container { width: 100%; max-width: 450px; background: #fff; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        /* Giriş Ekranı Stili */
+        #loginScreen h1 { font-size: 20px; margin-bottom: 20px; color: #2c3e50; text-align: center; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 14px; margin-bottom: 6px; color: #7f8c8d; font-weight: bold; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #bdc3c7; border-radius: 8px; font-size: 15px; }
+        
+        /* Yönetim Paneli İçerik Stili */
+        #adminScreen { display: none; }
+        #adminScreen.active { display: block; }
+        h1 { font-size: 22px; margin-bottom: 20px; color: #2c3e50; text-align: center; }
+        .btn { width: 100%; padding: 14px; font-size: 16px; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; transition: background 0.2s; }
+        .btn-primary { background-color: #3498db; color: white; margin-top: 10px; }
+        .btn-primary:hover { background-color: #2980b9; }
+        .file-input-wrapper { border: 2px dashed #bdc3c7; padding: 20px; text-align: center; border-radius: 10px; margin-bottom: 20px; background: #fafafa; cursor: pointer; }
+        .status-box { margin-top: 20px; font-size: 14px; color: #555; text-align: center; font-weight: bold; }
+        .back-link { display: inline-block; margin-top: 15px; color: #7f8c8d; text-decoration: none; font-size: 14px; text-align: center; width: 100%; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>QR Yönetim Paneli</h1>
-        
-        <div class="section">
-            <h3>Toplu QR Yükleme (Firebase'e Kayıt)</h3>
-            <p style="font-size: 13px; color: #666; margin: 10px 0;">Klasördeki JPEG QR dosyalarını seçip Firebase veritabanına aktarın.</p>
-            <input type="file" id="qrFilesInput" multiple accept="image/jpeg">
+        <!-- 1. GİRİŞ EKRANI -->
+        <div id="loginScreen">
+            <h1>YÖNETİM GİRİŞİ</h1>
+            <div class="form-group">
+                <label>Kullanıcı Adı</label>
+                <input type="text" id="usernameInput" placeholder="Kullanıcı adınızı girin">
+            </div>
+            <div class="form-group">
+                <label>Şifre</label>
+                <input type="password" id="passwordInput" placeholder="Şifrenizi girin">
+            </div>
+            <button class="btn btn-primary" onclick="checkLogin()">GİRİŞ YAP</button>
             <br>
-            <button class="btn btn-blue" onclick="uploadQRsToFirebase()">Firebase'e Yükle</button>
-            <div id="uploadStatus" class="status-text"></div>
+            <a href="index.html" class="back-link">&larr; Ana Sayfaya Dön</a>
         </div>
 
-        <a href="index.html" class="back-link">&larr; Ana Ekrana Dön</a>
+        <!-- 2. ASIL YÖNETİM PANELİ (Giriş yapılınca açılır) -->
+        <div id="adminScreen">
+            <h1>QR YÜKLEME PANELİ</h1>
+            
+            <div class="file-input-wrapper" onclick="document.getElementById('qrFiles').click()">
+                <p>📁 QR Görsellerini Seçmek İçin Tıkla</p>
+                <input type="file" id="qrFiles" multiple accept="image/*" style="display: none;">
+            </div>
+
+            <button class="btn btn-primary" id="uploadBtn" onclick="uploadQRs()">YÜKLEMEYİ BAŞLAT</button>
+            <div class="status-box" id="statusText">Seçilen dosya yok.</div>
+            
+            <a href="index.html" class="back-link">&larr; Ana Sayfaya Dön</a>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Firebase Yapılandırmanız
+        // --- GİRİŞ BİLGİLERİ (İstediğin gibi değiştirebilirsin) ---
+        const DOGRU_KULLANICI = "admin";
+        const DOGRU_SIFRE = "12345";
+
+        window.checkLogin = function() {
+            const user = document.getElementById('usernameInput').value.trim();
+            const pass = document.getElementById('passwordInput').value.trim();
+
+            if (user === DOGRU_KULLANICI && pass === DOGRU_SIFRE) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('adminScreen').classList.add('active');
+            } else {
+                alert("Hatalı kullanıcı adı veya şifre!");
+            }
+        };
+
+        // Firebase Ayarları
         const firebaseConfig = {
             apiKey: "AIzaSyDDrB1HQwibxGNgM4OSPDzI05x1KMdqH14",
             authDomain: "samsundoa.firebaseapp.com",
@@ -53,44 +96,48 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        window.uploadQRsToFirebase = function() {
-            const fileInput = document.getElementById('qrFilesInput');
-            const statusDiv = document.getElementById('uploadStatus');
+        window.uploadQRs = async function() {
+            const fileInput = document.getElementById('qrFiles');
+            const statusText = document.getElementById('statusText');
+            const uploadBtn = document.getElementById('uploadBtn');
 
             if (fileInput.files.length === 0) {
-                alert('Lütfen en az bir QR dosyası seçin!');
+                alert("Lütfen önce QR görsellerini seçin!");
                 return;
             }
 
-            statusDiv.innerText = `Dosyalar işleniyor (0 / ${fileInput.files.length})...`;
-            
-            let filesProcessed = 0;
+            uploadBtn.disabled = true;
+            let successCount = 0;
             const totalFiles = fileInput.files.length;
-            const filesArray = Array.from(fileInput.files);
 
-            filesArray.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
+            for (let i = 0; i < totalFiles; i++) {
+                const file = fileInput.files[i];
+                statusText.innerText = `Yükleniyor: ${i + 1} / ${totalFiles} (${file.name})`;
 
-            filesArray.forEach(file => {
+                try {
+                    const dataUrl = await readFileAsDataURL(file);
+                    await addDoc(collection(db, "qr_pool"), {
+                        name: file.name,
+                        dataUrl: dataUrl,
+                        status: "kullanilmadi",
+                        createdAt: new Date()
+                    });
+                    successCount++;
+                } catch (err) {
+                    console.error("Yükleme hatası:", file.name, err);
+                }
+            }
+
+            statusText.innerText = `Tamamlandı! Toplam ${successCount} adet QR havuza eklendi.`;
+            uploadBtn.disabled = false;
+            fileInput.value = "";
+        };
+
+        function readFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = async function(e) {
-                    try {
-                        await addDoc(collection(db, "qr_pool"), {
-                            name: file.name,
-                            dataUrl: e.target.result,
-                            status: 'kullanilmadi'
-                        });
-
-                        filesProcessed++;
-                        statusDiv.innerText = `Yükleniyor... (${filesProcessed} / ${totalFiles})`;
-
-                        if (filesProcessed === totalFiles) {
-                            statusDiv.innerText = `Tüm ${totalFiles} adet QR başarıyla Firebase'e yüklendi!`;
-                        }
-                    } catch (error) {
-                        console.error("Yükleme hatası:", error);
-                        statusDiv.innerText = "Yükleme sırasında hata oluştu!";
-                    }
-                };
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
                 reader.readAsDataURL(file);
             });
         }
