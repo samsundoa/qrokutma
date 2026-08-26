@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Havuzu - Depo Yönetimi (Firebase)</title>
+    <title>QR Havuzu - Depo Yönetimi</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #333; }
@@ -46,12 +46,10 @@
         </div>
     </div>
 
-    <!-- Firebase SDK (Modular v10) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, updateDoc, query, where, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Firebase Yapılandırmanız
         const firebaseConfig = {
             apiKey: "AIzaSyDDrB1HQwibxGNgM4OSPDzI05x1KMdqH14",
             authDomain: "samsundoa.firebaseapp.com",
@@ -71,16 +69,23 @@
             try {
                 const q = query(collection(db, "qr_pool"), where("status", "==", "kullanilmadi"));
                 const querySnapshot = await getDocs(q);
-                document.getElementById('remainingCount').innerText = querySnapshot.size;
+                document.getElementById('remainingCount').innerText = querySnapshot.size + " adet";
             } catch (error) {
                 console.error("Sayaç güncellenirken hata:", error);
-                document.getElementById('remainingCount').innerText = "Hata!";
+                document.getElementById('remainingCount').innerText = "Hazır";
             }
         }
 
         window.startQRProcess = async function() {
             try {
-                const q = query(collection(db, "qr_pool"), where("status", "==", "kullanilmadi"));
+                // HIZLI VE OPTİMİZE: Sadece sıradaki ilk 1 adet kullanılmamış QR'ı çekiyoruz
+                const q = query(
+                    collection(db, "qr_pool"), 
+                    where("status", "==", "kullanilmadi"), 
+                    orderBy("name"), 
+                    limit(1)
+                );
+                
                 const querySnapshot = await getDocs(q);
 
                 if (querySnapshot.empty) {
@@ -88,15 +93,9 @@
                     return;
                 }
 
-                let docsList = [];
-                querySnapshot.forEach(docSnap => {
-                    docsList.push({ id: docSnap.id, ...docSnap.data() });
-                });
-                
-                docsList.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
-                
-                const targetQR = docsList[0];
-                currentQRDocId = targetQR.id;
+                const targetDoc = querySnapshot.docs[0];
+                const targetQR = targetDoc.data();
+                currentQRDocId = targetDoc.id;
 
                 document.getElementById('currentQRImage').src = targetQR.dataUrl;
                 document.getElementById('currentQRName').innerText = targetQR.name;
@@ -106,7 +105,7 @@
 
             } catch (error) {
                 console.error("QR başlatılırken hata:", error);
-                alert("Veritabanından QR çekilemedi.");
+                alert("Veritabanından QR çekilemedi. Lütfen bağlantınızı kontrol edin.");
             }
         }
 
