@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Havuzu - Depo Yönetimi (Firebase)</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #333; }
+        .container { width: 100%; max-width: 400px; background: #fff; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; }
+        .screen { display: none; }
+        .screen.active { display: block; }
+        h1 { font-size: 22px; margin-bottom: 20px; color: #2c3e50; }
+        .counter { font-size: 18px; color: #7f8c8d; margin-bottom: 30px; }
+        .counter span { font-weight: bold; color: #2980b9; }
+        .btn { width: 100%; padding: 16px; font-size: 16px; font-weight: bold; border: none; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+        .btn-primary { background-color: #27ae60; color: white; margin-bottom: 12px; }
+        .btn-danger { background-color: #e74c3c; color: white; }
+        .qr-box { width: 250px; height: 250px; border: 2px dashed #bdc3c7; border-radius: 12px; margin: 0 auto 24px auto; display: flex; align-items: center; justify-content: center; background: #fafafa; overflow: hidden; }
+        .qr-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .qr-name { font-size: 14px; color: #95a5a6; margin-bottom: 15px; }
+        .back-link { display: inline-block; margin-top: 15px; color: #7f8c8d; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 1. ANA EKRAN -->
+        <div id="homeScreen" class="screen active">
+            <h1>QR HAVUZU</h1>
+            <div class="counter">Kalan QR: <span id="remainingCount">Yükleniyor...</span></div>
+            <button class="btn btn-primary" onclick="startQRProcess()">QR BAŞLAT</button>
+            <br>
+            <a href="admin.html" class="back-link">Yönetim / Yükleme Paneli &rarr;</a>
+        </div>
+
+        <!-- 2. QR GÖSTERME EKRANI -->
+        <div id="qrScreen" class="screen">
+            <div class="qr-box">
+                <img id="currentQRImage" src="" alt="QR Kod">
+            </div>
+            <div class="qr-name" id="currentQRName">QR_0000.jpg</div>
+            <button class="btn btn-danger" onclick="markAsUsed()">KULLANILDI / SİL</button>
+            <br>
+            <a href="#" class="back-link" onclick="goHome(event)">&larr; Ana Ekrana Dön</a>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (Modular v10) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Firebase Yapılandırmanız
+        const firebaseConfig = {
+            apiKey: "AIzaSyDDrB1HQwibxGNgM4OSPDzI05x1KMdqH14",
+            authDomain: "samsundoa.firebaseapp.com",
+            projectId: "samsundoa",
+            storageBucket: "samsundoa.firebasestorage.app",
+            messagingSenderId: "757904973555",
+            appId: "1:757904973555:web:4f6de06dfdb114f6632186",
+            measurementId: "G-04G6VXDE52"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let currentQRDocId = null;
+
+        async function updateCounters() {
+            try {
+                const q = query(collection(db, "qr_pool"), where("status", "==", "kullanilmadi"));
+                const querySnapshot = await getDocs(q);
+                document.getElementById('remainingCount').innerText = querySnapshot.size;
+            } catch (error) {
+                console.error("Sayaç güncellenirken hata:", error);
+                document.getElementById('remainingCount').innerText = "Hata!";
+            }
+        }
+
+        window.startQRProcess = async function() {
+            try {
+                const q = query(collection(db, "qr_pool"), where("status", "==", "kullanilmadi"));
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    alert('Havuzda kullanılabilir QR kalmadı! Lütfen yönetim panelinden QR yükleyin.');
+                    return;
+                }
+
+                let docsList = [];
+                querySnapshot.forEach(docSnap => {
+                    docsList.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                
+                docsList.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
+                
+                const targetQR = docsList[0];
+                currentQRDocId = targetQR.id;
+
+                document.getElementById('currentQRImage').src = targetQR.dataUrl;
+                document.getElementById('currentQRName').innerText = targetQR.name;
+
+                document.getElementById('homeScreen').classList.remove('active');
+                document.getElementById('qrScreen').classList.add('active');
+
+            } catch (error) {
+                console.error("QR başlatılırken hata:", error);
+                alert("Veritabanından QR çekilemedi.");
+            }
+        }
+
+        window.markAsUsed = async function() {
+            if (!currentQRDocId) return;
+
+            try {
+                const qrRef = doc(db, "qr_pool", currentQRDocId);
+                await updateDoc(qrRef, {
+                    status: 'kullanildi'
+                });
+
+                currentQRDocId = null;
+                updateCounters();
+                goHome();
+            } catch (error) {
+                console.error("Güncellenirken hata:", error);
+                alert("QR durumu güncellenemedi.");
+            }
+        }
+
+        window.goHome = function(e) {
+            if (e) e.preventDefault();
+            document.getElementById('qrScreen').classList.remove('active');
+            document.getElementById('homeScreen').classList.add('active');
+            updateCounters();
+        }
+
+        updateCounters();
+    </script>
+</body>
+</html>

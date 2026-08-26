@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Yönetim ve Yükleme Paneli (Firebase)</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: #f4f7f6; padding: 20px; color: #333; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 600px; background: #fff; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h1 { font-size: 20px; margin-bottom: 20px; color: #2c3e50; }
+        .section { margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        .btn { padding: 12px 20px; font-size: 14px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; }
+        .btn-blue { background-color: #2980b9; color: white; }
+        .btn-danger { background-color: #c0392b; color: white; }
+        input[type="file"] { margin-bottom: 10px; }
+        .status-text { margin-top: 10px; font-size: 14px; color: #27ae60; font-weight: bold; }
+        .back-link { display: inline-block; margin-top: 10px; color: #7f8c8d; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>QR Yönetim Paneli</h1>
+        
+        <div class="section">
+            <h3>Toplu QR Yükleme (Firebase'e Kayıt)</h3>
+            <p style="font-size: 13px; color: #666; margin: 10px 0;">Klasördeki JPEG QR dosyalarını seçip Firebase veritabanına aktarın.</p>
+            <input type="file" id="qrFilesInput" multiple accept="image/jpeg">
+            <br>
+            <button class="btn btn-blue" onclick="uploadQRsToFirebase()">Firebase'e Yükle</button>
+            <div id="uploadStatus" class="status-text"></div>
+        </div>
+
+        <a href="index.html" class="back-link">&larr; Ana Ekrana Dön</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Firebase Yapılandırmanız
+        const firebaseConfig = {
+            apiKey: "AIzaSyDDrB1HQwibxGNgM4OSPDzI05x1KMdqH14",
+            authDomain: "samsundoa.firebaseapp.com",
+            projectId: "samsundoa",
+            storageBucket: "samsundoa.firebasestorage.app",
+            messagingSenderId: "757904973555",
+            appId: "1:757904973555:web:4f6de06dfdb114f6632186",
+            measurementId: "G-04G6VXDE52"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.uploadQRsToFirebase = function() {
+            const fileInput = document.getElementById('qrFilesInput');
+            const statusDiv = document.getElementById('uploadStatus');
+
+            if (fileInput.files.length === 0) {
+                alert('Lütfen en az bir QR dosyası seçin!');
+                return;
+            }
+
+            statusDiv.innerText = `Dosyalar işleniyor (0 / ${fileInput.files.length})...`;
+            
+            let filesProcessed = 0;
+            const totalFiles = fileInput.files.length;
+            const filesArray = Array.from(fileInput.files);
+
+            filesArray.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
+
+            filesArray.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        await addDoc(collection(db, "qr_pool"), {
+                            name: file.name,
+                            dataUrl: e.target.result,
+                            status: 'kullanilmadi'
+                        });
+
+                        filesProcessed++;
+                        statusDiv.innerText = `Yükleniyor... (${filesProcessed} / ${totalFiles})`;
+
+                        if (filesProcessed === totalFiles) {
+                            statusDiv.innerText = `Tüm ${totalFiles} adet QR başarıyla Firebase'e yüklendi!`;
+                        }
+                    } catch (error) {
+                        console.error("Yükleme hatası:", error);
+                        statusDiv.innerText = "Yükleme sırasında hata oluştu!";
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+    </script>
+</body>
+</html>
